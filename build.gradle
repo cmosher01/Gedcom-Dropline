@@ -1,0 +1,19 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+group 'nu.mine.mosher.gedcom.dropline'
+version '1.0.0-SNAPSHOT'
+mainClassName = 'nu.mine.mosher.gedcom.dropline.Dropline'
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+    maven {
+        url 'http://mosher.mine.nu/nexus/repository/maven-public/'
+    }
+}
+
+dependencies {
+    compile group: 'nu.mine.mosher.gedcom', name: 'gedcom-lib', version: 'latest.integration'
+    compile group: 'nu.mine.mosher.mopper', name: 'mopper', version: 'latest.integration'
+}
