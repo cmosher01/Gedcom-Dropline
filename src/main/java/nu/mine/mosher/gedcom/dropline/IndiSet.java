@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 
 class IndiSet {
-    private final List mrIndi = new ArrayList(); // <Indi>
+    private final List<Indi> mrIndi = new ArrayList<>();
 
     private int mMaxWidth;
 
@@ -24,11 +24,8 @@ class IndiSet {
     public Rectangle init(Graphics g) {
         Rectangle bounds = new Rectangle();
 
-        for (Iterator i = mrIndi.iterator(); i.hasNext(); ) {
-            Indi indi = (Indi) i.next();
-
-            Rectangle boundsIndi = indi.calc(g, mMaxWidth);
-            bounds.add(boundsIndi);
+        for (Indi indi : mrIndi) {
+            bounds.add(indi.calc(g, mMaxWidth));
         }
 
         return bounds;
@@ -37,9 +34,7 @@ class IndiSet {
     public void paint(Graphics g) {
         RectangularShape clip = g.getClipBounds();
 
-        for (Iterator i = mrIndi.iterator(); i.hasNext(); ) {
-            Indi indi = (Indi) i.next();
-
+        for (Indi indi : mrIndi) {
             if (indi.sect(clip)) {
                 indi.paint(g);
             }
@@ -47,9 +42,7 @@ class IndiSet {
     }
 
     public Indi isOnIndi(Point point) {
-        for (Iterator i = mrIndi.iterator(); i.hasNext(); ) {
-            Indi indi = (Indi) i.next();
-
+        for (Indi indi : mrIndi) {
             if (indi.isOn(point)) {
                 return indi;
             }

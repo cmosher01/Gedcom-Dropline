@@ -1,0 +1,38 @@
+150
+31
+I0,John Moger,b: c. 1546,d: c. Jan 1611/2,195,30
+I1,Edith Crosse,b: c. 1555,d: c. Apr 1619,314,30
+I2,Denise Browne,,,94,41
+I3,Agnes Moger,b: c. Dec 1568,,30,155
+I4,Mary Moger,b: c. Sep 1570,,120,155
+I5,Edith Moger,b: c. Dec 1581,,232,155
+I6,John Moger,b: c. Oct 1584,d: 27 Nov 1584,329,155
+I7,Robert Moger,b: c. Sep 1587,d: bef 04 Feb 1588/9,418,155
+I8,Robert Moger,b: c. Feb 1588/9,,522,155
+I9,John Moger,b: c. Jul 1590,,605,155
+I10,Edith Moger,b: c. Apr 1595,,567,209
+I11,Nicholas Moger,b: c. Dec 1596,d: c. 1670,874,154
+I12,Frances Moger,,d: c. Sep 1605,477,209
+I13,Tristram Moger,,,373,209
+I14,Lydia Maxson,b: 1612,d: 1680,990,154
+I15,Hugh Moger,b: 12 Jun 1632,d: 03 Nov 1713,772,354
+I16,John Moger,b: 1635,d: 1656,861,354
+I17,Daniel Moger,b: c. 1642,d: 1656,1181,354
+I18,Mary Moger,b: c. 1641,d: 02 Feb 1717/8,1096,354
+I19,James Moger,b: c. 1643,d: 07 Dec 1713,1259,354
+I20,Joseph Moger,b: c. 1640,,1017,354
+I21,Nicholas Moger,b: c. 1637,,934,354
+I22,Hugh Moger,b: c. 1583,d: c. Jan 1656/7,274,209
+I23,Margaret,b: c. 1584,d: c. 30 Jul 1658,183,209
+I24,Edith Moger,b: c. Feb 1609/10,,111,354
+I25,Edith Moger,b: c. Apr 1611,,196,354
+I26,John Moger,b: c. Nov 1613,d: c. Aug 1670,271,354
+I27,Mabel Moger,b: c. Feb 1615/6,,349,354
+I28,Mary Moger,b: c. Jun 1621,d: bef 09 Jul 1656,530,354
+I29,Dashwood Moger,b: c. Jun 1619,d: c. Nov 1619,434,354
+I30,Hugh Moger,b: c. Mar 1608/9,d: 26 Sep 1666,30,354
+4
+I0,I1,10,I5,I6,I7,I8,I9,I10,I11,I12,I13,I22
+I0,I2,2,I3,I4
+I11,I14,7,I15,I16,I17,I18,I21,I19,I20
+I22,I23,7,I24,I25,I26,I27,I28,I29,I30

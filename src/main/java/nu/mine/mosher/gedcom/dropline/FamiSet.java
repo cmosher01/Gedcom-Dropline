@@ -7,28 +7,23 @@ import java.util.Iterator;
 import java.util.List;
 
 public class FamiSet {
-    private final List mrFami = new ArrayList(); // <Indi>
+    private final List<Fami> mrFami = new ArrayList<>();
 
     public void add(Fami fami) {
         mrFami.add(fami);
     }
 
     public void init(Graphics g) {
-        for (Iterator i = mrFami.iterator(); i.hasNext(); ) {
-            Fami fami = (Fami) i.next();
-            fami.calc(g);
-        }
+        mrFami.forEach(f -> f.calc(g));
     }
 
     public void paint(Graphics g) {
         Rectangle2D clip = g.getClipBounds();
 
-        for (Iterator i = mrFami.iterator(); i.hasNext(); ) {
-            Fami fami = (Fami) i.next();
-
-            if (fami.sect(clip)) {
-                fami.paint(g);
+        mrFami.forEach(f -> {
+            if (f.sect(clip)) {
+                f.paint(g);
             }
-        }
+        });
     }
 }

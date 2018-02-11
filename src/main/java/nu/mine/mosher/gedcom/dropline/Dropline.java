@@ -15,14 +15,14 @@ import java.util.Map;
  *
  * @author Chris Mosher
  */
-public class GROapplet extends JApplet {
+public class Dropline extends JApplet {
     private boolean test = false;
     private FamilyChart fc;
 
     /**
      * @throws HeadlessException
      */
-    public GROapplet() throws HeadlessException {
+    public Dropline() throws HeadlessException {
     }
 
     /**
@@ -33,69 +33,7 @@ public class GROapplet extends JApplet {
             super.init();
             tryinit();
         } catch (Throwable e) {
-            handleException(e);
-        }
-    }
-
-    protected void handleException(Throwable e) {
-        try {
-            /*
-             * Print simple error message to Java Console.
-             * Do this for sanity in case something bad
-             * happens below that prevents any error message
-             * from being displayed in the browser.
-             */
-            e.printStackTrace();
-
-            /*
-             * Build a StringBuffer containing the entire
-             * exception message and stack dump. This includes
-             * any chained exceptions.
-             */
-            StringBuffer sb = new StringBuffer();
-            appendException(e, sb);
-            Throwable cause = e.getCause();
-            while (cause != null) {
-                sb.append("caused by:\r\n");
-                appendException(cause, sb);
-                cause = cause.getCause();
-            }
-
-            /*
-             * Make a text area (with scroll bars as needed)
-             * and display the exception message.
-             */
-            JTextArea errorPane = new JTextArea();
-            errorPane.read(new StringReader(sb.toString()), null);
-            JScrollPane areaScrollPane = new JScrollPane(errorPane);
-            areaScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
-            areaScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-            getContentPane().removeAll();
-            getContentPane().add(areaScrollPane);
-        } catch (Throwable ignore) {
-            System.err.println("Exception happened while processing exception.");
-            System.err.println(ignore.getMessage());
-            System.err.println("The original exception was:");
-            System.err.println(e.getMessage());
-        }
-    }
-
-    protected static void appendException(Throwable e, StringBuffer sb) {
-        String sMsg = e.getMessage();
-        if (sMsg != null) {
-            sb.append(sMsg);
-            sb.append("\r\n");
-        }
-
-        sb.append(e.getClass().getName());
-        sb.append("\r\n");
-
-        StackTraceElement[] rtr = e.getStackTrace();
-        for (int i = 0; i < rtr.length; i++) {
-            StackTraceElement stackTraceElement = rtr[i];
-            sb.append("    at ");
-            sb.append(stackTraceElement.toString());
-            sb.append("\r\n");
+            throw new IllegalStateException(e);
         }
     }
 
@@ -111,17 +49,14 @@ public class GROapplet extends JApplet {
 
         InputStream streamTree;
 
-        //		if (test)
-        //		{
-        //			streamTree = new FileInputStream(new File("test.gro"));
-        //		}
-        //		else
-        //		{
-        URL url = new URL(getDocumentBase(), "?chartdata");
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.connect();
-        streamTree = con.getInputStream();
-        //		}
+        if (this.test) {
+            streamTree = new FileInputStream(new File("test.gro"));
+        } else {
+            URL url = new URL(getDocumentBase(), "?chartdata");
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.connect();
+            streamTree = con.getInputStream();
+        }
 
         readFrom(streamTree);
 
@@ -199,7 +134,7 @@ public class GROapplet extends JApplet {
             }
         });
 
-        GROapplet applet = new GROapplet();
+        Dropline applet = new Dropline();
         applet.setTestMode();
         applet.init();
         f.add(applet);

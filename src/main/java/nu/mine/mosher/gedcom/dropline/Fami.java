@@ -15,7 +15,7 @@ public class Fami {
 
     private Indi husb;
     private Indi wife;
-    private List rChild = new ArrayList(); // <Indi>
+    private List<Indi> rChild = new ArrayList<>();
 
     private Line2D parentBar1;
     private Line2D parentBar2;
@@ -187,8 +187,8 @@ public class Fami {
         drawLine(g, descentBar3);
         drawLine(g, childBar);
         if (rChildBar != null) {
-            for (int i = 0; i < rChildBar.length; i++) {
-                drawLine(g, rChildBar[i]);
+            for (final Line2D aRChildBar : rChildBar) {
+                drawLine(g, aRChildBar);
             }
         }
     }

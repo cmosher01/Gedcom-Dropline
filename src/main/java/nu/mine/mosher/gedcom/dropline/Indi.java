@@ -27,7 +27,7 @@ class Indi {
 
     private int w;
     private int h;
-    private final List mLines = new ArrayList(); // <TextLine>
+    private final List<TextLine> mLines = new ArrayList<>();
 
     private boolean pushed;
 
@@ -111,26 +111,13 @@ class Indi {
     }
 
     protected void drawText(Graphics g) {
-        for (Iterator i = mLines.iterator(); i.hasNext(); ) {
-            TextLine text = (TextLine) i.next();
+        for (TextLine text : mLines) {
             text.draw(g, x + LEFT_MARGIN);
         }
     }
 
     public String toString() {
-        StringBuffer s = new StringBuffer(256);
-        s.append("Indi: ");
-        s.append(mName);
-        s.append(" [");
-        s.append(x);
-        s.append(",");
-        s.append(y);
-        s.append(",");
-        s.append(w);
-        s.append(",");
-        s.append(h);
-        s.append("]");
-        return s.toString();
+        return "Indi: " + mName + " [" + x + "," + y + "," + w + "," + h + "]";
     }
 
     public Rectangle2D getBounds() {
