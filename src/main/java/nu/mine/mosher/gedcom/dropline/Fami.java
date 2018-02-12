@@ -1,11 +1,15 @@
 package nu.mine.mosher.gedcom.dropline;
 
-import java.awt.*;
+import java.awt.Graphics;
+import java.awt.Polygon;
+import java.awt.Rectangle;
+import java.awt.Shape;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class Fami {
     private static final int BAR_HEIGHT = 4;
@@ -201,7 +205,11 @@ public class Fami {
         g.drawLine((int) Math.round(line.getX1()), (int) Math.round(line.getY1()), (int) Math.round(line.getX2()), (int) Math.round(line.getY2()));
     }
 
-    public boolean sect(Rectangle2D clip) {
+    public boolean sect(final Rectangle2D clip) {
+        if (Objects.isNull(clip)) {
+            return true;
+        }
+
         if (childBounds.intersects(clip)) {
             return true;
         }

@@ -1,6 +1,6 @@
 package nu.mine.mosher.gedcom.dropline;
 
-import java.awt.*;
+import java.awt.Graphics;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,7 @@ public class FamiSet {
     }
 
     public void paint(Graphics g) {
-        Rectangle2D clip = g.getClipBounds();
+        final Rectangle2D clip = g.getClipBounds();
 
         mrFami.forEach(f -> {
             if (f.sect(clip)) {

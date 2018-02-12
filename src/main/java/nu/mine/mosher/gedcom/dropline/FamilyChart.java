@@ -1,51 +1,56 @@
 package nu.mine.mosher.gedcom.dropline;
 
-import javax.swing.*;
-import java.awt.*;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.awt.font.TextAttribute;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class FamilyChart extends JPanel {
+public class FamilyChart {
+//    public static final String FONT_LOGICAL_NAME = "SansSerif";
     public static final String FONT_LOGICAL_NAME = "Trebuchet MS";
 //    public static final String FONT_LOGICAL_NAME = "Georgia";
+
     private final IndiSet mIndis;
     private final FamiSet mFamis;
-    private boolean mInitialized;
 
-    public FamilyChart(IndiSet indis, FamiSet famis) {
+    public FamilyChart(final IndiSet indis, final FamiSet famis) {
         mIndis = indis;
         mFamis = famis;
     }
 
-    public void paint(Graphics g) {
-        if (!mInitialized) {
-            init(g);
-        }
+    public Rectangle getQuickBounds() {
+        return this.mIndis.getQuickBounds();
+    }
 
-        Rectangle clip = g.getClipBounds();
-        g.clearRect(clip.x, clip.y, clip.width, clip.height);
+    public Dimension init(final Graphics g) {
+        g.setFont(
+            Font.decode(FONT_LOGICAL_NAME)
+                .deriveFont(9.0F)
+                .deriveFont(getFontAttrs()));
+        System.err.println("Using font: "+g.getFont().getName());
+
+        final Rectangle bounds = mIndis.init(g);
+        mFamis.init(g);
+
+        return new Dimension(bounds.width, bounds.height);
+    }
+
+    public void paint(final Graphics g) {
+//        final Rectangle clip = g.getClipBounds();
+//        g.clearRect(clip.x, clip.y, clip.width, clip.height);
 
         mFamis.paint(g);
         mIndis.paint(g);
     }
 
-    protected void init(Graphics g) {
-        Font f = Font.decode(FONT_LOGICAL_NAME);
-        f = f.deriveFont(9.0F);
-        Map<TextAttribute, Object> map = new HashMap<>();
-        map.put(TextAttribute.KERNING, TextAttribute.KERNING_ON);
-        map.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON);
-        f = f.deriveFont(map);
-        g.setFont(f);
-
-        Rectangle bounds = mIndis.init(g);
-        mFamis.init(g);
-
-        Dimension dimBounds = new Dimension(bounds.width, bounds.height);
-        setSize(dimBounds);
-        setPreferredSize(dimBounds);
-
-        mInitialized = true;
+    private static Map<TextAttribute, Object> getFontAttrs() {
+        final Map<TextAttribute, Object> map = new HashMap<>();
+//        map.put(TextAttribute.KERNING, TextAttribute.KERNING_ON);
+//        map.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON);
+        return Collections.unmodifiableMap(map);
     }
 }

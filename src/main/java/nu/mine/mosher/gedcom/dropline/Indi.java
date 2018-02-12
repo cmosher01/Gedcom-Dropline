@@ -1,6 +1,12 @@
 package nu.mine.mosher.gedcom.dropline;
 
-import java.awt.*;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.font.FontRenderContext;
+import java.awt.font.GlyphVector;
 import java.awt.font.LineBreakMeasurer;
 import java.awt.font.TextAttribute;
 import java.awt.font.TextLayout;
@@ -8,7 +14,11 @@ import java.awt.geom.Rectangle2D;
 import java.awt.geom.RectangularShape;
 import java.text.AttributedString;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 class Indi {
     private static final int LEFT_MARGIN = 3;
@@ -54,6 +64,10 @@ class Indi {
         mDeath = death;
     }
 
+    public Point getXY() {
+        return new Point(this.x, this.y);
+    }
+
     public Rectangle calc(Graphics g, int maxWidth) {
         mLines.clear();
 
@@ -87,14 +101,23 @@ class Indi {
         h = (int) Math.rint(cy) - y;
     }
 
-    public boolean sect(RectangularShape rect) {
+    public boolean sect(final RectangularShape rect) {
+        if (Objects.isNull(rect)) {
+            return true;
+        }
         return rect.intersects(x, y, w, h);
     }
 
     public void paint(Graphics g) {
-        for (TextLine text : mLines) {
-            text.draw(g, x + LEFT_MARGIN);
-        }
+//        for (TextLine text : mLines) {
+//            text.draw(g, x + LEFT_MARGIN);
+//        }
+        final int x = this.x + LEFT_MARGIN;
+        final int dy = g.getFontMetrics().getHeight();
+        int y = this.y;
+        g.drawString(this.mName, x, y += dy);
+        g.drawString(this.mBirth, x, y += dy);
+        g.drawString(this.mDeath, x, y += dy);
     }
 
     public String toString() {
@@ -103,5 +126,60 @@ class Indi {
 
     public Rectangle2D getBounds() {
         return new Rectangle2D.Double(x, y, w, h);
+    }
+
+
+
+
+
+
+    static class LineInfo {
+        String text;
+        float width;
+        float height;
+
+        LineInfo(String text, float width, float height) {
+            this.text = text;
+            this.width = width;
+            this.height = height;
+        }
+    }
+
+    public void paintEXAMPLE(Graphics graphics) {
+        final int maxWidth = 200;
+
+
+        Graphics2D g = (Graphics2D) graphics;
+        List<LineInfo> lines = new ArrayList<>();
+        FontMetrics fm = g.getFontMetrics();
+        FontRenderContext frc = g.getFontRenderContext();
+        Map<TextAttribute, Object> attrs = new HashMap<>();
+        attrs.put(TextAttribute.FONT, g.getFont());
+        float totalHeight = 0;
+        int curPos = 0;
+        AttributedString str = new AttributedString(mName, attrs);
+        LineBreakMeasurer measurer = new LineBreakMeasurer(
+            str.getIterator(), frc);
+        while (measurer.getPosition() < mName.length()) {
+            // Give us a few pixels inset from the edges
+            int nextPos = measurer.nextOffset(maxWidth - 10);
+            String line = mName.substring(curPos, nextPos);
+            GlyphVector gv = g.getFont().createGlyphVector(frc, line);
+            Rectangle2D bounds = gv.getVisualBounds();
+            float height = (float) bounds.getHeight() + 5;
+            lines.add(new LineInfo(line, (float) bounds.getWidth(), height));
+            totalHeight += height;
+            curPos = nextPos;
+            measurer.setPosition(curPos);
+        }
+        // Draw the strings centered vertically and horizontally in this component
+        g.setFont(g.getFont());
+        float curY = (this.h - totalHeight) / 2;
+        for (Iterator iter = lines.iterator(); iter.hasNext();) {
+            LineInfo line = (LineInfo) iter.next();
+            curY += line.height;
+            float x = (this.w - line.width) / 2;
+            g.drawString(line.text, (int) x, (int) curY);
+        }
     }
 }
