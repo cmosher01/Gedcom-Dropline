@@ -1,33 +1,28 @@
 package nu.mine.mosher.gedcom.dropline;
 
+import nu.mine.mosher.collection.TreeNode;
+import nu.mine.mosher.gedcom.Gedcom;
+import nu.mine.mosher.gedcom.GedcomLine;
+import nu.mine.mosher.gedcom.GedcomTag;
+import nu.mine.mosher.gedcom.GedcomTree;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-/**
- * TODO
- *
- * @author Chris Mosher
- */
 public class Dropline extends JApplet {
-    private boolean test = false;
+    private static final int MAX_INDI_WIDTH = 200;
+
+    private final BufferedInputStream streamGedcom;
     private FamilyChart fc;
 
-    /**
-     * @throws HeadlessException
-     */
-    public Dropline() throws HeadlessException {
+    public Dropline(final BufferedInputStream streamGedcom) throws HeadlessException {
+        this.streamGedcom = streamGedcom;
     }
 
-    /**
-     *
-     */
     public void init() {
         try {
             super.init();
@@ -47,103 +42,128 @@ public class Dropline extends JApplet {
     protected void tryinit() throws Exception {
         useOSLookAndFeel();
 
-        InputStream streamTree;
-
-        if (this.test) {
-            streamTree = new FileInputStream(new File("test.gro"));
-        } else {
-            URL url = new URL(getDocumentBase(), "?chartdata");
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.connect();
-            streamTree = con.getInputStream();
-        }
-
-        readFrom(streamTree);
+        final GedcomTree tree = Gedcom.readFile(this.streamGedcom);
+        readFrom(tree);
 
         JScrollPane scr = new JScrollPane(fc, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
         getContentPane().add(scr);
     }
 
-    protected void readFrom(InputStream instream) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(instream, "UTF-8"));
+    private void readFrom(final GedcomTree tree) {
+        final Map<String, Indi> mapIdToIndi = new HashMap<>();
 
-        Map<String, Indi> mapIdToIndi = new HashMap<String, Indi>();
-
-        IndiSet indis = new IndiSet();
-
-        String sMaxWidth = br.readLine();
-        double dMaxWidth = Double.parseDouble(sMaxWidth);
-        int cMaxWidth = (int) Math.round(dMaxWidth);
-        indis.setMaxWidth(cMaxWidth);
-
-        String scIndi = br.readLine();
-        int cIndi = Integer.parseInt(scIndi);
-        for (int i = 0; i < cIndi; ++i) {
-            String slineIndi = br.readLine();
-            StringFieldizer sf = new StringFieldizer(slineIndi);
-            StringFieldizer.Iter it = sf.iterator();
-            String id = it.next();
-            int nid = Integer.parseInt(id.substring(1));
-            String name = it.next();
-            String birth = it.next();
-            String death = it.next();
-            String sx = it.next();
-            double dx = Double.parseDouble(sx);
-            int x = (int) Math.round(dx);
-            String sy = it.next();
-            double dy = Double.parseDouble(sy);
-            int y = (int) Math.round(dy);
-            Indi indi = new Indi(x, y, nid, name, birth, death);
-            indis.add(indi);
-            mapIdToIndi.put(id, indi);
-        }
-
-        FamiSet famis = new FamiSet();
-        String scFami = br.readLine();
-        int cFami = Integer.parseInt(scFami);
-        for (int i = 0; i < cFami; ++i) {
-            String slineIndi = br.readLine();
-            StringFieldizer sf = new StringFieldizer(slineIndi);
-            StringFieldizer.Iter it = sf.iterator();
-            Fami fami = new Fami();
-            String husb = it.next();
-            fami.setHusb(mapIdToIndi.get(husb));
-            String wife = it.next();
-            fami.setWife(mapIdToIndi.get(wife));
-            String sc = it.next();
-            int c = Integer.parseInt(sc);
-            for (int ic = 0; ic < c; ++ic) {
-                String chil = it.next();
-                fami.addChild(mapIdToIndi.get(chil));
+        final IndiSet indis = new IndiSet();
+        tree.getRoot().forEach(nodeIndi -> {
+            if (nodeIndi.getObject().getTag().equals(GedcomTag.INDI)) {
+                final Indi indi = buildIndi(nodeIndi);
+                mapIdToIndi.put(indi.getId(), indi);
+                indis.add(indi);
             }
-            famis.add(fami);
-        }
+        });
 
-        fc = new FamilyChart(this, indis, famis);
+        final FamiSet famis = new FamiSet();
+        tree.getRoot().forEach(nodeFami -> {
+            if (nodeFami.getObject().getTag().equals(GedcomTag.FAM)) {
+                final Fami fami = buildFami(nodeFami, Collections.unmodifiableMap(mapIdToIndi));
+                famis.add(fami);
+            }
+        });
+
+        indis.setMaxWidth(MAX_INDI_WIDTH);
+
+        this.fc = new FamilyChart(indis, famis);
     }
 
-    public static void main(String[] args) {
-        if (args.length > 0) {
-            System.err.println("Arguments ignored.");
-        }
+    private Indi buildIndi(final TreeNode<GedcomLine> nodeIndi) {
+        final int[] xy = toCoord(getChildValue(nodeIndi, "_XY"));
+        final GedcomLine lineIndi = nodeIndi.getObject();
+        final String name = toName(getChildValue(nodeIndi, "NAME"));
+        final String birth = toDate(getChildEventDate(nodeIndi, "BIRT"));
+        final String death = toDate(getChildEventDate(nodeIndi, "DEAT"));
+        final String id = lineIndi.getID();
+        return new Indi(xy[0], xy[1], id, name, birth, death);
+    }
 
-        Frame f = new Frame("Paint Applet");
+    private int[] toCoord(final String xy) {
+        if (Objects.isNull(xy) || xy.isEmpty()) {
+            return new int[] {0,0};
+        }
+        int[] r = Arrays.stream(xy.split("\\s+")).mapToInt(Dropline::parseInt).toArray();
+        if (r.length != 2) {
+            System.err.println("Could not parse _XY: "+xy);
+            return new int[] {0,0};
+        }
+        return r;
+    }
+
+    private static int parseInt(final String s) {
+        if (Objects.isNull(s)  || s.isEmpty()) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(s);
+        } catch (final Throwable ignore) {
+            System.err.println("Could not parse value from _XY tag: "+s);
+            return 0;
+        }
+    }
+
+    private String toName(final String name) {
+        return name.replaceAll("/", "");
+    }
+
+    private String toDate(final String date) {
+        return date;
+    }
+
+    private String getChildEventDate(final TreeNode<GedcomLine> node, final String tag) {
+        for (final TreeNode<GedcomLine> c : node) {
+            if (c.getObject().getTagString().equals(tag)) {
+                return getChildValue(c, "DATE");
+            }
+        }
+        return "";
+    }
+
+    private String getChildValue(final TreeNode<GedcomLine> node, final String tag) {
+        for (final TreeNode<GedcomLine> c : node) {
+            if (c.getObject().getTagString().equals(tag)) {
+                return c.getObject().getValue();
+            }
+        }
+        return "";
+    }
+
+    private Fami buildFami(final TreeNode<GedcomLine> nodeFami, final Map<String, Indi> mapIdToIndi) {
+        final Fami fami = new Fami();
+        for (final TreeNode<GedcomLine> c : nodeFami) {
+            final GedcomLine child = c.getObject();
+            switch (child.getTag()) {
+                case HUSB: fami.setHusb(mapIdToIndi.get(child.getPointer())); break;
+                case WIFE: fami.setWife(mapIdToIndi.get(child.getPointer())); break;
+                case CHIL: fami.addChild(mapIdToIndi.get(child.getPointer())); break;
+            }
+        }
+        return fami;
+    }
+
+    public static void main(String[] args) throws IOException {
+        if (args.length != 1) {
+            throw new IllegalArgumentException("Usage: java Dropline input.ged");
+        }
+        final File infile = new File(args[0]);
+        final Frame f = new Frame(infile.getCanonicalPath());
         f.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
                 System.exit(0);
             }
         });
 
-        Dropline applet = new Dropline();
-        applet.setTestMode();
+        final Dropline applet = new Dropline(new BufferedInputStream(new FileInputStream(infile)));
         applet.init();
         f.add(applet);
 
-        f.setSize(640, 480);
+        f.setSize(1280, 960);
         f.setVisible(true);
-    }
-
-    private void setTestMode() {
-        this.test = true;
     }
 }

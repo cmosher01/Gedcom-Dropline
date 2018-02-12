@@ -1,24 +1,21 @@
 package nu.mine.mosher.gedcom.dropline;
 
 import javax.swing.*;
-import java.applet.Applet;
 import java.awt.*;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.awt.font.TextAttribute;
+import java.util.HashMap;
+import java.util.Map;
 
 public class FamilyChart extends JPanel {
-    private final Applet mApplet;
+    public static final String FONT_LOGICAL_NAME = "Trebuchet MS";
+//    public static final String FONT_LOGICAL_NAME = "Georgia";
     private final IndiSet mIndis;
     private final FamiSet mFamis;
     private boolean mInitialized;
 
-    public FamilyChart(Applet applet, IndiSet indis, FamiSet famis) {
-        mApplet = applet;
+    public FamilyChart(IndiSet indis, FamiSet famis) {
         mIndis = indis;
         mFamis = famis;
-        GROMouseListener ml = new GROMouseListener(this);
-        addMouseListener(ml);
-        addMouseMotionListener(ml);
     }
 
     public void paint(Graphics g) {
@@ -34,6 +31,14 @@ public class FamilyChart extends JPanel {
     }
 
     protected void init(Graphics g) {
+        Font f = Font.decode(FONT_LOGICAL_NAME);
+        f = f.deriveFont(9.0F);
+        Map<TextAttribute, Object> map = new HashMap<>();
+        map.put(TextAttribute.KERNING, TextAttribute.KERNING_ON);
+        map.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON);
+        f = f.deriveFont(map);
+        g.setFont(f);
+
         Rectangle bounds = mIndis.init(g);
         mFamis.init(g);
 
@@ -42,20 +47,5 @@ public class FamilyChart extends JPanel {
         setPreferredSize(dimBounds);
 
         mInitialized = true;
-    }
-
-    public Indi hitIndi(Point point) {
-        return mIndis.isOnIndi(point);
-    }
-
-    public void gotoIndi(Indi mLastIndi) {
-        String relurl = mLastIndi.getRelativeURL();
-        URL url = null;
-        try {
-            url = new URL(mApplet.getDocumentBase(), relurl);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        mApplet.getAppletContext().showDocument(url);
     }
 }

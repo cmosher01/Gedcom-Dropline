@@ -3,7 +3,6 @@ package nu.mine.mosher.gedcom.dropline;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 public class FamiSet {

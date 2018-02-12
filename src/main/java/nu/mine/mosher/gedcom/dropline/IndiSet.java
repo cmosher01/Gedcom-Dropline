@@ -3,7 +3,6 @@ package nu.mine.mosher.gedcom.dropline;
 import java.awt.*;
 import java.awt.geom.RectangularShape;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 class IndiSet {
@@ -39,15 +38,5 @@ class IndiSet {
                 indi.paint(g);
             }
         }
-    }
-
-    public Indi isOnIndi(Point point) {
-        for (Indi indi : mrIndi) {
-            if (indi.isOn(point)) {
-                return indi;
-            }
-        }
-
-        return null;
     }
 }
