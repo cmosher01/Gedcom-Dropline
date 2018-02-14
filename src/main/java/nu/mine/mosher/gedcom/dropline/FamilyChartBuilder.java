@@ -15,8 +15,6 @@ import nu.mine.mosher.gedcom.GedcomTree;
 import nu.mine.mosher.gedcom.exception.InvalidLevel;
 
 public final class FamilyChartBuilder {
-    private static final int MAX_INDI_WIDTH = 200;
-
     private FamilyChartBuilder() {
         throw new IllegalStateException("not intended to be instantiated");
     }
@@ -42,8 +40,6 @@ public final class FamilyChartBuilder {
                 famis.add(fami);
             }
         });
-
-        indis.setMaxWidth(MAX_INDI_WIDTH);
 
         return new FamilyChart(indis, famis);
     }

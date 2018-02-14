@@ -1,6 +1,8 @@
 package nu.mine.mosher.gedcom.dropline;
 
+import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.Shape;
@@ -184,6 +186,8 @@ public class Fami {
     }
 
     public void paint(Graphics g) {
+        g.setColor(Color.LIGHT_GRAY);
+
         drawLine(g, parentBar1);
         drawLine(g, parentBar2);
         drawLine(g, descentBar1);
@@ -202,7 +206,7 @@ public class Fami {
             return;
         }
 
-        g.drawLine((int) Math.round(line.getX1()), (int) Math.round(line.getY1()), (int) Math.round(line.getX2()), (int) Math.round(line.getY2()));
+        ((Graphics2D)g).draw(line);
     }
 
     public boolean sect(final Rectangle2D clip) {

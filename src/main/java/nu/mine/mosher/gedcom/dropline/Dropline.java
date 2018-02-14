@@ -1,103 +1,81 @@
 package nu.mine.mosher.gedcom.dropline;
 
-import java.awt.Frame;
-import java.awt.Rectangle;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import javax.swing.JApplet;
-import javax.swing.JScrollPane;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.UIManager;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import nu.mine.mosher.gedcom.exception.InvalidLevel;
 import org.apache.batik.dom.GenericDOMImplementation;
-import org.apache.batik.svggen.SVGGeneratorContext;
 import org.apache.batik.svggen.SVGGraphics2D;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
-public class Dropline extends JApplet {
-    private final BufferedInputStream streamGedcom;
-
-    public Dropline(final BufferedInputStream streamGedcom) {
-        this.streamGedcom = streamGedcom;
-    }
-
-    public void init() {
-        try {
-            super.init();
-            tryinit();
-        } catch (Throwable e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private void tryinit() throws IOException, InvalidLevel {
-        useOSLookAndFeel();
-
-        final FamilyChartPanel fc = new FamilyChartPanel(FamilyChartBuilder.create(this.streamGedcom));
-
-        JScrollPane scr = new JScrollPane(fc, ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS, ScrollPaneConstants.HORIZONTAL_SCROLLBAR_ALWAYS);
-        getContentPane().add(scr);
-    }
-
-    private static void useOSLookAndFeel() {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignoreAnyExceptions) {
-        }
-    }
-
-    public static void mainSwing(String[] args) throws IOException {
-        if (args.length != 1) {
-            throw new IllegalArgumentException("Usage: java Dropline input.ged");
-        }
-        final File infile = new File(args[0]);
-        final Frame f = new Frame(infile.getCanonicalPath());
-        f.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) {
-                System.exit(0);
-            }
-        });
-
-        final Dropline applet = new Dropline(new BufferedInputStream(new FileInputStream(infile)));
-        applet.init();
-        f.add(applet);
-
-        f.setSize(1280, 960);
-        f.setVisible(true);
-    }
-
-    public static void main(String[] args) throws IOException, InvalidLevel {
+public class Dropline {
+    public static void main(String[] args) throws IOException, InvalidLevel, TransformerException {
         if (args.length != 1) {
             throw new IllegalArgumentException("Usage: java Dropline input.ged");
         }
         final File infile = new File(args[0]);
         final FamilyChart chart = FamilyChartBuilder.create(new BufferedInputStream(new FileInputStream(infile)));
-//        final Rectangle bounds = chart.getQuickBounds();
-
-
-
 
         final DOMImplementation domImpl = GenericDOMImplementation.getDOMImplementation();
 
-        final String svgNS = "http://www.w3.org/2000/svg";
-        final Document document = domImpl.createDocument(svgNS, "svg", null);
+        final Document document = domImpl.createDocument("http://www.w3.org/2000/svg", "svg", null);
 
-        SVGGeneratorContext ctx = SVGGeneratorContext.createDefault(document);
-        ctx.setEmbeddedFontsOn(false);
-        final SVGGraphics2D svgGenerator = new SVGGraphics2D(ctx, false);
+        final SVGGraphics2D svgGenerator = new SVGGraphics2D(document);
 
         chart.init(svgGenerator);
         chart.paint(svgGenerator);
 
-        final boolean useCSS = true;
-        final Writer out = new OutputStreamWriter(System.out, "UTF-8");
-        svgGenerator.stream(out, useCSS);
+        svgGenerator.getRoot(document.getDocumentElement());
+        final Node svg = document.getFirstChild();
+        final Node g = svg.getChildNodes().item(2);
+        ((Element) g).setAttribute("id", "top_g");
+
+        System.out.println("<!doctype html>\n" +
+            "<html>\n" +
+            "<head>\n" +
+            "<style type=\"text/css\">\n" +
+            "html, body, svg {\n" +
+            "    width: 95%;\n" +
+            "    height: 95%;\n" +
+            "    margin: 0 auto;\n" +
+            "}\n" +
+            "</style>\n" +
+            "<script src=\"https://cdn.rawgit.com/anvaka/panzoom/v4.1.0/dist/panzoom.js\">\n" +
+            "</script>\n" +
+            "<script>\n" +
+            "    window.onload = function() {\n" +
+            "        const g = document.getElementById('top_g');\n" +
+            "        panzoom(g, {\n" +
+            "            minZoom: 0.025,\n" +
+            "            maxZoom: 250,\n" +
+            "            zoomSpeed: 0.075,\n" +
+            "            smoothScroll: false\n" +
+            "        });\n" +
+            "    };\n" +
+            "</script>\n" +
+            "</head>\n" +
+            "<body>");
+        dumpDocument(document);
+        System.out.println("</body>\n</html>");
+    }
+
+    private static void dumpDocument(Document doc) throws TransformerException {
+        final DOMSource domSource = new DOMSource(doc);
+        final StreamResult result = new StreamResult(System.out);
+        final TransformerFactory tf = TransformerFactory.newInstance();
+        final Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+        transformer.transform(domSource, result);
     }
 }
