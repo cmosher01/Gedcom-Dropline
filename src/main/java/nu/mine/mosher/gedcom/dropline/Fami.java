@@ -1,23 +1,24 @@
 package nu.mine.mosher.gedcom.dropline;
 
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Polygon;
-import java.awt.Rectangle;
-import java.awt.Shape;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class Fami {
-    private static final int BAR_HEIGHT = 4;
-    private static final int MARRIAGE_SPACING = 20;
-    private static final int CHILD_LINE_DISTANCE = 10;
-    private static final int CHILD_HEIGHT = 10;
+    public static final double BAR_HEIGHT = 4;
+    public static final double MARRIAGE_SPACING = 20;
+    public static final double CHILD_LINE_DISTANCE = 10;
+    public static final double CHILD_HEIGHT = 10;
+    public static final SvgBuilder.ClassAttr CLS_BAR_PARENT = new SvgBuilder.ClassAttr("barParent");
+    public static final SvgBuilder.ClassAttr CLS_BAR_DESCENT = new SvgBuilder.ClassAttr("barDescent");
+    public static final SvgBuilder.ClassAttr CLS_BAR_CHILD = new SvgBuilder.ClassAttr("barChild");
+
+
 
     private Indi husb;
     private Indi wife;
@@ -33,10 +34,6 @@ public class Fami {
     private Line2D childBar;
     private Line2D[] rChildBar;
 
-    private Shape parentBounds; //Polygon
-    private Shape descentLine; //Line2D
-    private Shape childBounds; //Polygon
-
     public void setHusb(Indi indi) {
         husb = indi;
     }
@@ -49,7 +46,7 @@ public class Fami {
         rChild.add(indi);
     }
 
-    public void calc(Graphics g) {
+    private void calc() {
         if (husb == null && wife == null && rChild.size() == 0) {
             return;
         }
@@ -87,16 +84,16 @@ public class Fami {
             pt2 = temp;
         }
 
-        double dx = pt2.getX() - pt1.getX();
-        double dy = pt2.getY() - pt1.getY();
+        final double dx = pt2.getX() - pt1.getX();
+        final double dy = pt2.getY() - pt1.getY();
         double dist = Math.sqrt(dx * dx + dy * dy);
         if (-1e-8 < Math.rint(dist) && Math.rint(dist) < 1e-8) {
             dist = 1;
         }
 
-        double nx = pt1.getX() + (CHILD_LINE_DISTANCE * dx / dist);
-        double ny = pt1.getY() + (CHILD_LINE_DISTANCE * dy / dist) + BAR_HEIGHT / 2;
-        Point2D ptP = new Point2D.Double(nx, ny);
+        final double nx = pt1.getX() + (CHILD_LINE_DISTANCE * dx / dist);
+        final double ny = pt1.getY() + (CHILD_LINE_DISTANCE * dy / dist) + BAR_HEIGHT / 2;
+        final Point2D ptP = new Point2D.Double(nx, ny);
 
 
 
@@ -112,7 +109,7 @@ public class Fami {
         if (!rChild.isEmpty()) {
             Point2D[] rp = new Point2D.Double[rChild.size()];
             for (int i = 0; i < rp.length; i++) {
-                Rectangle2D rect = ((Indi) rChild.get(i)).getBounds();
+                final Rectangle2D rect = rChild.get(i).getBounds();
 
                 double x = rect.getCenterX();
                 double y = rect.getY();
@@ -150,82 +147,28 @@ public class Fami {
                 }
             }
         }
-
-
-
-        Polygon pg = new Polygon();
-        if (parentBar1 != null) {
-            pg.addPoint((int) parentBar1.getX1(), (int) parentBar1.getY1());
-            pg.addPoint((int) parentBar1.getX2(), (int) parentBar1.getY2());
-            pg.addPoint((int) parentBar2.getX2(), (int) parentBar2.getY2());
-            pg.addPoint((int) parentBar2.getX1(), (int) parentBar2.getY1());
-        }
-        parentBounds = pg;
-
-        Line2D ln = new Line2D.Double();
-        if (descentBar1 != null) {
-            ln.setLine(descentBar1);
-        }
-        descentLine = ln;
-
-        Rectangle rect = new Rectangle();
-        if (descentBar1 != null) {
-            double y = descentBar1.getY2();
-            double x = Math.min(nLeft, ptP.getX());
-            double w = Math.max(nRight, ptP.getX()) - x + 1;
-            if (w < 1) {
-                w = 1;
-            }
-            double h = nBottom - y + 1;
-            if (h < 1) {
-                h = 1;
-            }
-            rect.setRect(x, y, w, h);
-        }
-        childBounds = rect;
     }
 
-    public void paint(Graphics g) {
-        g.setColor(Color.LIGHT_GRAY);
+    public void buildInto(final SvgBuilder svg) {
+        calc();
 
-        drawLine(g, parentBar1);
-        drawLine(g, parentBar2);
-        drawLine(g, descentBar1);
-        drawLine(g, descentBar2);
-        drawLine(g, descentBar3);
-        drawLine(g, childBar);
-        if (rChildBar != null) {
-            for (final Line2D aRChildBar : rChildBar) {
-                drawLine(g, aRChildBar);
-            }
+        buildLine(svg, this.parentBar1, CLS_BAR_PARENT);
+        buildLine(svg, this.parentBar2, CLS_BAR_PARENT);
+
+        buildLine(svg, this.descentBar1, CLS_BAR_DESCENT);
+        buildLine(svg, this.descentBar2, CLS_BAR_DESCENT);
+        buildLine(svg, this.descentBar3, CLS_BAR_DESCENT);
+
+        buildLine(svg, this.childBar, CLS_BAR_CHILD);
+        if (!Objects.isNull(this.rChildBar)) {
+            Arrays.stream(this.rChildBar).forEach(c -> buildLine(svg, c, CLS_BAR_CHILD));
         }
     }
 
-    protected void drawLine(Graphics g, Line2D line) {
-        if (line == null) {
+    private static void buildLine(final SvgBuilder svg, final Line2D line, final SvgBuilder.ClassAttr cls) {
+        if (Objects.isNull(line)) {
             return;
         }
-
-        ((Graphics2D)g).draw(line);
-    }
-
-    public boolean sect(final Rectangle2D clip) {
-        if (Objects.isNull(clip)) {
-            return true;
-        }
-
-        if (childBounds.intersects(clip)) {
-            return true;
-        }
-
-        if (parentBounds.intersects(clip)) {
-            return true;
-        }
-
-        if (descentLine.intersects(clip)) {
-            return true;
-        }
-
-        return false;
+        svg.add(line, Optional.of(cls));
     }
 }

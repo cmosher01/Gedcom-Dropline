@@ -1,81 +1,62 @@
 package nu.mine.mosher.gedcom.dropline;
 
 import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+import nu.mine.mosher.gedcom.Gedcom;
+import nu.mine.mosher.gedcom.GedcomTree;
 import nu.mine.mosher.gedcom.exception.InvalidLevel;
-import org.apache.batik.dom.GenericDOMImplementation;
-import org.apache.batik.svggen.SVGGraphics2D;
-import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
 public class Dropline {
-    public static void main(String[] args) throws IOException, InvalidLevel, TransformerException {
+    public static Document build(final GedcomTree tree) throws IOException, InvalidLevel, ParserConfigurationException {
+        final FamilyChart chart = FamilyChartBuilder.create(tree);
+        final SvgBuilder svg = new SvgBuilder();
+        chart.buildInto(svg);
+        return addCss(svg.get());
+    }
+
+    private static Document addCss(final Document svg) {
+        final Element css = svg.createElementNS("http://www.w3.org/1999/xhtml", "link");
+        css.setAttribute("rel", "stylesheet");
+        css.setAttribute("type", "text/css");
+        css.setAttribute("href", "dropline.css");
+
+        final Element root = svg.getDocumentElement();
+        root.insertBefore(css, root.getFirstChild());
+
+        return svg;
+    }
+
+
+
+    public static void main(String[] args) throws IOException, InvalidLevel, TransformerException, ParserConfigurationException {
         if (args.length != 1) {
             throw new IllegalArgumentException("Usage: java Dropline input.ged");
         }
-        final File infile = new File(args[0]);
-        final FamilyChart chart = FamilyChartBuilder.create(new BufferedInputStream(new FileInputStream(infile)));
-
-        final DOMImplementation domImpl = GenericDOMImplementation.getDOMImplementation();
-
-        final Document document = domImpl.createDocument("http://www.w3.org/2000/svg", "svg", null);
-
-        final SVGGraphics2D svgGenerator = new SVGGraphics2D(document);
-
-        chart.init(svgGenerator);
-        chart.paint(svgGenerator);
-
-        svgGenerator.getRoot(document.getDocumentElement());
-        final Node svg = document.getFirstChild();
-        final Node g = svg.getChildNodes().item(2);
-        ((Element) g).setAttribute("id", "top_g");
-
-        System.out.println("<!doctype html>\n" +
-            "<html>\n" +
-            "<head>\n" +
-            "<style type=\"text/css\">\n" +
-            "html, body, svg {\n" +
-            "    width: 95%;\n" +
-            "    height: 95%;\n" +
-            "    margin: 0 auto;\n" +
-            "}\n" +
-            "</style>\n" +
-            "<script src=\"https://cdn.rawgit.com/anvaka/panzoom/v4.1.0/dist/panzoom.js\">\n" +
-            "</script>\n" +
-            "<script>\n" +
-            "    window.onload = function() {\n" +
-            "        const g = document.getElementById('top_g');\n" +
-            "        panzoom(g, {\n" +
-            "            minZoom: 0.025,\n" +
-            "            maxZoom: 250,\n" +
-            "            zoomSpeed: 0.075,\n" +
-            "            smoothScroll: false\n" +
-            "        });\n" +
-            "    };\n" +
-            "</script>\n" +
-            "</head>\n" +
-            "<body>");
-        dumpDocument(document);
-        System.out.println("</body>\n</html>");
+        final Path pathInput = Paths.get(args[0]).toRealPath();
+        printDoc(build(Gedcom.readFile(new BufferedInputStream(Files.newInputStream(pathInput)))));
     }
 
-    private static void dumpDocument(Document doc) throws TransformerException {
-        final DOMSource domSource = new DOMSource(doc);
-        final StreamResult result = new StreamResult(System.out);
-        final TransformerFactory tf = TransformerFactory.newInstance();
-        final Transformer transformer = tf.newTransformer();
+    private static void printDoc(final Document document) throws TransformerException {
+        final Transformer transformer = TransformerFactory.newInstance().newTransformer();
+
+        transformer.setOutputProperty(OutputKeys.ENCODING, StandardCharsets.UTF_8.name());
+        transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-        transformer.transform(domSource, result);
+
+        transformer.transform(new DOMSource(document), new StreamResult(System.out));
     }
 }

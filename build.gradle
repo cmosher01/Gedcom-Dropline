@@ -15,6 +15,4 @@ repositories {
 
 dependencies {
     compile group: 'nu.mine.mosher.gedcom', name: 'gedcom-lib', version: 'latest.integration'
-    compile group: 'org.apache.xmlgraphics', name: 'batik-svggen', version: 'latest.integration'
-    compile group: 'org.apache.xmlgraphics', name: 'batik-dom', version: 'latest.integration'
 }
