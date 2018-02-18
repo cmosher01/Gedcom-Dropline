@@ -1,14 +1,10 @@
 package nu.mine.mosher.gedcom.dropline;
 
+import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import nu.mine.mosher.collection.TreeNode;
 import nu.mine.mosher.gedcom.GedcomLine;
 import nu.mine.mosher.gedcom.GedcomTag;
@@ -24,7 +20,13 @@ public final class FamilyChartBuilder {
 
     public static FamilyChart create(final GedcomTree tree) throws IOException, InvalidLevel {
         final Map<String, Indi> mapIdToIndi = new HashMap<>();
+        final List<Indi> indis = buildIndis(tree, mapIdToIndi);
+        normalize(indis);
+        final List<Fami> famis = buildFamis(tree, mapIdToIndi);
+        return new FamilyChart(indis, famis);
+    }
 
+    private static List<Indi> buildIndis(final GedcomTree tree, final Map<String, Indi> mapIdToIndi) {
         final List<Indi> indis = new ArrayList<>();
         tree.getRoot().forEach(nodeIndi -> {
             if (nodeIndi.getObject().getTag().equals(GedcomTag.INDI)) {
@@ -33,7 +35,20 @@ public final class FamilyChartBuilder {
                 indis.add(indi);
             }
         });
+        System.err.println(String.format("Calculated %d individuals.", indis.size()));
+        return indis;
+    }
 
+    private static void normalize(final List<Indi> indis) {
+        final Optional<Rectangle2D> bounds = indis.stream().map(Indi::getBounds).reduce(Rectangle2D::createUnion);
+        if (bounds.isPresent()) {
+            System.err.println("Total bounds: "+bounds.get());
+            final Dim2D shift = new Dim2D(-bounds.get().getX(), -bounds.get().getY());
+            indis.forEach(i -> i.move(shift));
+        }
+    }
+
+    private static List<Fami> buildFamis(final GedcomTree tree, final Map<String, Indi> mapIdToIndi) {
         final List<Fami> famis = new ArrayList<>();
         tree.getRoot().forEach(nodeFami -> {
             if (nodeFami.getObject().getTag().equals(GedcomTag.FAM)) {
@@ -41,13 +56,13 @@ public final class FamilyChartBuilder {
                 famis.add(fami);
             }
         });
-
-        return new FamilyChart(indis, famis);
+        System.err.println(String.format("Calculated %d families.", famis.size()));
+        return famis;
     }
 
     private static Indi buildIndi(final TreeNode<GedcomLine> nodeIndi) {
         final String xyval = getChildValue(nodeIndi, "_XY");
-        final double[] xy = toCoord(xyval);
+        final Optional<Point2D> coords = toCoord(xyval);
         final GedcomLine lineIndi = nodeIndi.getObject();
         final String name = toName(getChildValue(nodeIndi, "NAME"));
         final String birth = toDate(getChildEventDate(nodeIndi, "BIRT"));
@@ -58,19 +73,19 @@ public final class FamilyChartBuilder {
             System.err.println("WARNING: missing _XY for: " + name);
         }
 
-        return new Indi(xy[0], xy[1], id, name, birth, death);
+        return new Indi(coords.orElse(new Point2D.Double(0, 0)), id, name, birth, death);
     }
 
-    private static double[] toCoord(final String xy) {
+    private static Optional<Point2D> toCoord(final String xy) {
         if (Objects.isNull(xy) || xy.isEmpty()) {
-            return new double[]{ 0, 0 };
+            return Optional.empty();
         }
         final double[] r = Arrays.stream(xy.split("\\s+")).mapToDouble(FamilyChartBuilder::parseCoord).toArray();
         if (r.length != 2) {
             System.err.println("Could not parse _XY: " + xy);
-            return new double[]{ 0, 0 };
+            return Optional.empty();
         }
-        return r;
+        return Optional.of(new Point2D.Double(r[0], r[1]));
     }
 
     private static double parseCoord(final String s) {

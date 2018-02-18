@@ -17,6 +17,7 @@ public class Fami {
     public static final SvgBuilder.ClassAttr CLS_BAR_PARENT = new SvgBuilder.ClassAttr("barParent");
     public static final SvgBuilder.ClassAttr CLS_BAR_DESCENT = new SvgBuilder.ClassAttr("barDescent");
     public static final SvgBuilder.ClassAttr CLS_BAR_CHILD = new SvgBuilder.ClassAttr("barChild");
+    public static final double MAX_NATURAL_LINE_LENGTH = 2000.0D;
 
 
 
@@ -169,6 +170,13 @@ public class Fami {
         if (Objects.isNull(line)) {
             return;
         }
+        if (length(line) > MAX_NATURAL_LINE_LENGTH) {
+            System.err.println("Long line: "+cls.toString());
+        }
         svg.add(line, Optional.of(cls));
+    }
+
+    private static double length(final Line2D line) {
+        return Math.hypot(line.getX2()-line.getX1(), line.getY2()-line.getY1());
     }
 }

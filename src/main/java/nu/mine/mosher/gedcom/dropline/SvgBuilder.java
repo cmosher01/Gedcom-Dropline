@@ -24,6 +24,11 @@ public class SvgBuilder {
         private void set(Element e) {
             e.setAttribute("class", this.name);
         }
+
+        @Override
+        public String toString() {
+            return this.name;
+        }
     }
 
     public SvgBuilder() throws ParserConfigurationException {

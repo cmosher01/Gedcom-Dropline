@@ -2,22 +2,15 @@ package nu.mine.mosher.gedcom.dropline;
 
 import java.awt.Font;
 import java.awt.Graphics2D;
-import java.awt.font.LineBreakMeasurer;
-import java.awt.font.TextAttribute;
-import java.awt.font.TextLayout;
-import java.awt.geom.Point2D;
-import java.awt.geom.Rectangle2D;
+import java.awt.font.*;
+import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
-import static java.awt.font.TextAttribute.FONT;
+import static java.awt.font.TextAttribute.*;
+import static java.awt.image.BufferedImage.TYPE_BYTE_BINARY;
 import static java.lang.Math.max;
 import static java.util.Collections.singletonMap;
 
@@ -32,74 +25,46 @@ class Indi {
     public static final int DIM = 0x800;
     public static final SvgBuilder.ClassAttr CLS_NAME = new SvgBuilder.ClassAttr("fullName");
     public static final SvgBuilder.ClassAttr CLS_BIRTH = new SvgBuilder.ClassAttr("birth");
+    public static final String PFX_BIRTH = "\u200a*\u200a";
     public static final SvgBuilder.ClassAttr CLS_DEATH = new SvgBuilder.ClassAttr("death");
+    public static final String PFX_DEATH = "\u2020";
 
-    private final double x;
-    private final double y;
     private final String id;
-    private final String name;
-    private final String birth;
-    private final String death;
-
-    private double w;
-    private double h;
+    private final Point2D coords = new Point2D.Double(0, 0);
+    private final Dim2D dim = new Dim2D(0, TOP_MARGIN);
     private final List<Line> lines = new ArrayList<>();
 
 
 
-    private static class Line {
-        final String text;
-        final Point2D pt;
-        final SvgBuilder.ClassAttr cls;
 
-        public Line(final String text, final Point2D pt, final SvgBuilder.ClassAttr cls) {
+
+    private static class Line {
+        private final String text;
+        private final Dim2D off;
+        private final SvgBuilder.ClassAttr cls;
+
+        private Line(final String text, final Dim2D off, final SvgBuilder.ClassAttr cls) {
             this.text = text;
-            this.pt = pt;
+            this.off = off;
             this.cls = cls;
         }
 
-        public void buildInto(SvgBuilder svg) {
-            svg.add(this.text, this.pt, Optional.of(this.cls));
+        private void buildAtInto(Point2D at, SvgBuilder svg) {
+            svg.add(this.text, getPoint(at), Optional.of(this.cls));
+        }
+
+        private Point2D getPoint(Point2D at) {
+            return new Point2D.Double(at.getX() + this.off.getWidth(), at.getY() + this.off.getHeight());
         }
     }
 
 
 
-    public Indi(double x, double y, String id, String name, String birth, String death) {
-        this.x = x;
-        this.y = y;
+
+
+    public Indi(final Point2D coords, String id, String name, String birth, String death) {
         this.id = id;
-        this.name = name;
-        this.birth = birth;
-        this.death = death;
-    }
-
-    public String getId() {
-        return this.id;
-    }
-
-    public Rectangle2D getBounds() {
-        return new Rectangle2D.Double(x, y, w, h);
-    }
-
-    private void setMaxWidth(final double w) {
-        this.w = max(this.w, w);
-    }
-
-    private double getMaxWidth(final Graphics2D g) {
-        return MAX_WIDTH_EMS * g.getFontMetrics().stringWidth("M") - LEFT_MARGIN - RIGHT_MARGIN;
-    }
-
-    private static AttributedCharacterIterator getAttrStr(final String line, final Graphics2D g) {
-        return new AttributedString(line, singletonMap(FONT, g.getFont())).getIterator();
-    }
-
-
-
-    public void buildInto(final SvgBuilder svg) {
-        lines.clear();
-        this.w = 0;
-        this.h = TOP_MARGIN;
+        this.coords.setLocation(coords);
 
         /*
         We need to layout the lines of text (3 lines, but will be more
@@ -113,61 +78,87 @@ class Indi {
         ligatures.
          */
         final Graphics2D g = buildGraphics();
+        lines.clear();
 
         if (!name.isEmpty()) {
-            appendToDisplay(g, name, CLS_NAME);
+            appendToDisplay(g, name, CLS_NAME, this.dim, this.lines);
         }
         if (!birth.isEmpty()) {
-            appendToDisplay(g, "\u200a*\u200a" + birth, CLS_BIRTH);
+            appendToDisplay(g, PFX_BIRTH + birth, CLS_BIRTH, this.dim, this.lines);
         }
         if (!death.isEmpty()) {
-            appendToDisplay(g, "\u2020" + death, CLS_DEATH);
+            appendToDisplay(g, PFX_DEATH + death, CLS_DEATH, this.dim, this.lines);
         }
 
-        this.h += BOTTOM_MARGIN;
-
-        this.lines.forEach(line -> line.buildInto(svg));
+        this.dim.setSize(this.dim.getWidth(), this.dim.getHeight()+BOTTOM_MARGIN);
     }
 
-    private Graphics2D buildGraphics() {
-        final BufferedImage img = new BufferedImage(DIM, DIM, BufferedImage.TYPE_BYTE_BINARY);
-        final Graphics2D g = img.createGraphics();
-        return configureGraphics(g);
+    public String getId() {
+        return this.id;
     }
 
-    private Graphics2D configureGraphics(final Graphics2D g) {
+    public Rectangle2D getBounds() {
+        return new Rectangle2D.Double(this.coords.getX(), this.coords.getY(), this.dim.getWidth(), this.dim.getHeight());
+    }
+
+    public void buildInto(final SvgBuilder svg) {
+        this.lines.forEach(line -> line.buildAtInto(this.coords, svg));
+    }
+
+    public void move(final Dim2D delta) {
+        this.coords.setLocation(this.coords.getX() + delta.getWidth(), this.coords.getY() + delta.getHeight());
+    }
+
+
+
+
+
+    private static Graphics2D buildGraphics() {
+        return configureGraphics(new BufferedImage(DIM, DIM, TYPE_BYTE_BINARY).createGraphics());
+    }
+
+    private static Graphics2D configureGraphics(final Graphics2D g) {
         g.setFont(Font.decode(FONT_LOGICAL_NAME).deriveFont(FONT_POINT_SIZE).deriveFont(getFontAttrs()));
-
         return g;
     }
 
     private static Map<TextAttribute, Integer> getFontAttrs() {
         final Map<TextAttribute, Integer> map = new HashMap<>();
-        map.put(TextAttribute.KERNING, TextAttribute.KERNING_ON);
-        map.put(TextAttribute.LIGATURES, TextAttribute.LIGATURES_ON);
+        map.put(KERNING, KERNING_ON);
+        map.put(LIGATURES, LIGATURES_ON);
         return Collections.unmodifiableMap(map);
     }
 
-    private void appendToDisplay(final Graphics2D g, final String str, final SvgBuilder.ClassAttr cls) {
+    private static void appendToDisplay(final Graphics2D g, final String str, final SvgBuilder.ClassAttr cls, final Dim2D dim, final List<Line> lines) {
         final double maxWidth = getMaxWidth(g);
         final LineBreakMeasurer breaker = new LineBreakMeasurer(getAttrStr(str, g), g.getFontRenderContext());
 
-        int curPos = 0;
-        double drawPosY = this.y + this.h;
+        int cur = 0;
+        double dy = dim.getHeight();
+        double maxw = dim.getWidth();
         while (breaker.getPosition() < str.length()) {
-            final int nextPos = breaker.nextOffset((float)maxWidth);
-            final String line = str.substring(curPos, nextPos);
-            curPos = nextPos;
+            final int next = breaker.nextOffset((float) maxWidth);
+            final String line = str.substring(cur, next);
+            cur = next;
 
-            final TextLayout layout = breaker.nextLayout((float)maxWidth);
-            double drawPosX = this.x + (layout.isLeftToRight() ? LEFT_MARGIN : maxWidth - RIGHT_MARGIN - layout.getAdvance());
-            drawPosY += layout.getAscent();
+            final TextLayout layout = breaker.nextLayout((float) maxWidth);
+            final double dx = layout.isLeftToRight() ? LEFT_MARGIN : -RIGHT_MARGIN + -layout.getAdvance() + maxWidth;
+            dy += layout.getAscent();
 
-            this.lines.add(new Line(line, new Point2D.Double(drawPosX, drawPosY), cls));
+            lines.add(new Line(line, new Dim2D(dx, dy), cls));
 
-            drawPosY += layout.getDescent() + layout.getLeading();
-            setMaxWidth(LEFT_MARGIN + layout.getAdvance() + RIGHT_MARGIN);
+            dy += layout.getDescent() + layout.getLeading();
+
+            maxw = max(maxw, LEFT_MARGIN + layout.getAdvance() + RIGHT_MARGIN);
         }
-        this.h = drawPosY - this.y;
+        dim.setSize(maxw, dy);
+    }
+
+    private static double getMaxWidth(final Graphics2D g) {
+        return MAX_WIDTH_EMS * g.getFontMetrics().stringWidth("M") - LEFT_MARGIN - RIGHT_MARGIN;
+    }
+
+    private static AttributedCharacterIterator getAttrStr(final String line, final Graphics2D g) {
+        return new AttributedString(line, singletonMap(FONT, g.getFont())).getIterator();
     }
 }

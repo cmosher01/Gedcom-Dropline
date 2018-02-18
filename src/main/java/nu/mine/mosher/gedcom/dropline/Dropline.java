@@ -21,6 +21,7 @@ import org.w3c.dom.Element;
 
 public class Dropline {
     public static Document build(final GedcomTree tree) throws IOException, InvalidLevel, ParserConfigurationException {
+        System.err.println("Parsed GEDCOM file.");
         final FamilyChart chart = FamilyChartBuilder.create(tree);
         final SvgBuilder svg = new SvgBuilder();
         chart.buildInto(svg);
