@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.util.*;
+import nu.mine.mosher.geom.Dim2D;
 
 import static java.awt.font.TextAttribute.*;
 import static java.awt.image.BufferedImage.TYPE_BYTE_BINARY;

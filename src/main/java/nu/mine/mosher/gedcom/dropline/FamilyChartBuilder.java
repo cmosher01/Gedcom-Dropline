@@ -12,6 +12,7 @@ import nu.mine.mosher.gedcom.GedcomTree;
 import nu.mine.mosher.gedcom.date.DatePeriod;
 import nu.mine.mosher.gedcom.date.parser.GedcomDateValueParser;
 import nu.mine.mosher.gedcom.exception.InvalidLevel;
+import nu.mine.mosher.geom.Dim2D;
 
 public final class FamilyChartBuilder {
     private FamilyChartBuilder() {
