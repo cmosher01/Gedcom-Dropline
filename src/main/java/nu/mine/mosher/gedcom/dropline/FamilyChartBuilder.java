@@ -68,13 +68,14 @@ public final class FamilyChartBuilder {
         final String name = toName(getChildValue(nodeIndi, "NAME"));
         final String birth = toDate(getChildEventDate(nodeIndi, "BIRT"));
         final String death = toDate(getChildEventDate(nodeIndi, "DEAT"));
+        final String refn = getChildValue(nodeIndi, "REFN");
         final String id = lineIndi.getID();
 
         if (xyval.isEmpty()) {
             System.err.println("WARNING: missing _XY for: " + name);
         }
 
-        return new Indi(coords.orElse(new Point2D.Double(0, 0)), id, name, birth, death);
+        return new Indi(coords.orElse(new Point2D.Double(0, 0)), id, name, birth, death, refn);
     }
 
     private static Optional<Point2D> toCoord(final String xy) {

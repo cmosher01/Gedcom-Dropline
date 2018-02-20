@@ -43,15 +43,17 @@ class Indi {
         private final String text;
         private final Dim2D off;
         private final SvgBuilder.ClassAttr cls;
+        private final String refn;
 
-        private Line(final String text, final Dim2D off, final SvgBuilder.ClassAttr cls) {
+        private Line(final String text, final Dim2D off, final SvgBuilder.ClassAttr cls, final String refn) {
             this.text = text;
             this.off = off;
             this.cls = cls;
+            this.refn = refn;
         }
 
         private void buildAtInto(Point2D at, SvgBuilder svg) {
-            svg.add(this.text, getPoint(at), Optional.of(this.cls));
+            svg.add(this.text, getPoint(at), Optional.of(this.cls), "refn", this.refn);
         }
 
         private Point2D getPoint(Point2D at) {
@@ -63,7 +65,7 @@ class Indi {
 
 
 
-    public Indi(final Point2D coords, String id, String name, String birth, String death) {
+    public Indi(final Point2D coords, String id, String name, String birth, String death, String refn) {
         this.id = id;
         this.coords.setLocation(coords);
 
@@ -82,13 +84,13 @@ class Indi {
         lines.clear();
 
         if (!name.isEmpty()) {
-            appendToDisplay(g, name, CLS_NAME, this.dim, this.lines);
+            appendToDisplay(g, name, CLS_NAME, refn, this.dim, this.lines);
         }
         if (!birth.isEmpty()) {
-            appendToDisplay(g, PFX_BIRTH + birth, CLS_BIRTH, this.dim, this.lines);
+            appendToDisplay(g, PFX_BIRTH + birth, CLS_BIRTH, refn, this.dim, this.lines);
         }
         if (!death.isEmpty()) {
-            appendToDisplay(g, PFX_DEATH + death, CLS_DEATH, this.dim, this.lines);
+            appendToDisplay(g, PFX_DEATH + death, CLS_DEATH, refn, this.dim, this.lines);
         }
 
         this.dim.setSize(this.dim.getWidth(), this.dim.getHeight()+BOTTOM_MARGIN);
@@ -130,7 +132,7 @@ class Indi {
         return Collections.unmodifiableMap(map);
     }
 
-    private static void appendToDisplay(final Graphics2D g, final String str, final SvgBuilder.ClassAttr cls, final Dim2D dim, final List<Line> lines) {
+    private static void appendToDisplay(final Graphics2D g, final String str, final SvgBuilder.ClassAttr cls, final String refn, final Dim2D dim, final List<Line> lines) {
         final double maxWidth = getMaxWidth(g);
         final LineBreakMeasurer breaker = new LineBreakMeasurer(getAttrStr(str, g), g.getFontRenderContext());
 
@@ -146,7 +148,7 @@ class Indi {
             final double dx = layout.isLeftToRight() ? LEFT_MARGIN : -RIGHT_MARGIN + -layout.getAdvance() + maxWidth;
             dy += layout.getAscent();
 
-            lines.add(new Line(line, new Dim2D(dx, dy), cls));
+            lines.add(new Line(line, new Dim2D(dx, dy), cls, refn));
 
             dy += layout.getDescent() + layout.getLeading();
 

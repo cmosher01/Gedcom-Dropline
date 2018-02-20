@@ -43,10 +43,13 @@ public class SvgBuilder {
         this.svg.appendChild(e);
     }
 
-    public void add(final String string, final Point2D at, @SuppressWarnings("OptionalUsedAsFieldOrParameterType") final Optional<ClassAttr> cls) {
+    public void add(final String string, final Point2D at, @SuppressWarnings("OptionalUsedAsFieldOrParameterType") final Optional<ClassAttr> cls, final String dataAttr, final String dataVal) {
         final Element e = this.doc.createElement("text");
         addPointTo(at, e, "");
         cls.ifPresent(c -> c.set(e));
+        if (!dataAttr.isEmpty()) {
+            e.setAttribute("data-"+dataAttr, dataVal);
+        }
         e.appendChild(this.doc.createTextNode(string));
         this.svg.appendChild(e);
     }
