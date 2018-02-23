@@ -3,11 +3,7 @@ package nu.mine.mosher.gedcom.dropline;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 public class Fami {
     public static final double BAR_HEIGHT = 4;
@@ -38,13 +34,22 @@ public class Fami {
     public void setHusb(Indi indi) {
         husb = indi;
     }
+    public Optional<Indi> getHusb() {
+        return Optional.ofNullable(this.husb);
+    }
 
     public void setWife(Indi indi) {
         wife = indi;
     }
+    public Optional<Indi> getWife() {
+        return Optional.ofNullable(this.wife);
+    }
 
     public void addChild(Indi indi) {
         rChild.add(indi);
+    }
+    public List<Indi> getChildren() {
+        return Collections.unmodifiableList(this.rChild);
     }
 
     private void calc() {

@@ -11,6 +11,7 @@ import nu.mine.mosher.gedcom.GedcomTag;
 import nu.mine.mosher.gedcom.GedcomTree;
 import nu.mine.mosher.gedcom.date.DatePeriod;
 import nu.mine.mosher.gedcom.date.parser.GedcomDateValueParser;
+import nu.mine.mosher.gedcom.dropline.layout.Layout;
 import nu.mine.mosher.gedcom.exception.InvalidLevel;
 import nu.mine.mosher.geom.Dim2D;
 
@@ -22,8 +23,9 @@ public final class FamilyChartBuilder {
     public static FamilyChart create(final GedcomTree tree) throws IOException, InvalidLevel {
         final Map<String, Indi> mapIdToIndi = new HashMap<>();
         final List<Indi> indis = buildIndis(tree, mapIdToIndi);
+        final List<Fami> famis = buildFamis(tree, Collections.unmodifiableMap(mapIdToIndi));
+        layout(indis, famis);
         normalize(indis);
-        final List<Fami> famis = buildFamis(tree, mapIdToIndi);
         return new FamilyChart(indis, famis);
     }
 
@@ -69,13 +71,27 @@ public final class FamilyChartBuilder {
         final String birth = toDate(getChildEventDate(nodeIndi, "BIRT"));
         final String death = toDate(getChildEventDate(nodeIndi, "DEAT"));
         final String refn = getChildValue(nodeIndi, "REFN");
+        final int sex = toSex(getChildValue(nodeIndi, "SEX"));
         final String id = lineIndi.getID();
 
         if (xyval.isEmpty()) {
             System.err.println("WARNING: missing _XY for: " + name);
         }
 
-        return new Indi(coords.orElse(new Point2D.Double(0, 0)), id, name, birth, death, refn);
+        return new Indi(coords.orElse(new Point2D.Double(0, 0)), id, name, birth, death, refn, sex);
+    }
+
+    private static int toSex(final String sex) {
+        if (!sex.isEmpty()) {
+            final char c = sex.toUpperCase().charAt(0);
+            if (c == 'M') {
+                return 1;
+            }
+            if (c == 'F') {
+                return 2;
+            }
+        }
+        return 0;
     }
 
     private static Optional<Point2D> toCoord(final String xy) {
@@ -157,5 +173,16 @@ public final class FamilyChartBuilder {
             }
         }
         return fami;
+    }
+
+    private static void layout(final List<Indi> indis, final List<Fami> famis) {
+        /* don't layout if _XY was found on anyone */
+        for (final Indi indi : indis) {
+            if (indi.getBounds().getX() != 0 || indi.getBounds().getY() != 0) {
+                return;
+            }
+        }
+        System.err.println("No _XY coordinates found; laying out dropline chart automatically...");
+        new Layout(indis, famis).cleanAll();
     }
 }

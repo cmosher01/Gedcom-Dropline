@@ -15,7 +15,7 @@ import static java.awt.image.BufferedImage.TYPE_BYTE_BINARY;
 import static java.lang.Math.max;
 import static java.util.Collections.singletonMap;
 
-class Indi {
+public class Indi {
     public static final String FONT_LOGICAL_NAME = "Garamond";
     public static final float FONT_POINT_SIZE = 9.0F;
     public static final int MAX_WIDTH_EMS = 16;
@@ -34,8 +34,11 @@ class Indi {
     private final Point2D coords = new Point2D.Double(0, 0);
     private final Dim2D dim = new Dim2D(0, TOP_MARGIN);
     private final List<Line> lines = new ArrayList<>();
+    private final int sex;
 
-
+    public int getSex() {
+        return this.sex;
+    }
 
 
 
@@ -65,9 +68,10 @@ class Indi {
 
 
 
-    public Indi(final Point2D coords, String id, String name, String birth, String death, String refn) {
+    public Indi(final Point2D coords, String id, String name, String birth, String death, String refn, final int sex) {
         this.id = id;
         this.coords.setLocation(coords);
+        this.sex = sex;
 
         /*
         We need to layout the lines of text (3 lines, but will be more
