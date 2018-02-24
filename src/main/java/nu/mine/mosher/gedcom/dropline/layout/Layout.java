@@ -300,7 +300,7 @@ public class Layout {
             }
 
             if (!left) {
-                final LinkedList<CIndividual> t = right_sps;
+                final LinkedList<CIndividual> t = left_sps;
                 left_sps = right_sps;
                 right_sps = t;
             }
