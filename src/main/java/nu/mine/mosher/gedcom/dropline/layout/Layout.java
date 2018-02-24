@@ -425,17 +425,7 @@ public class Layout {
             }
 
             // Sorting branches.
-            rma.sort((
-                (Comparator<Pair<Integer, CIndividual>>) (o1, o2) -> {
-                    int c = o1.first.compareTo(o2.first);
-                    if (c == 0) {
-                        c = Integer.compare(o1.second.level, o2.second.level);
-                    }
-                    if (c == 0) {
-                        c = Integer.compare(o1.second.sex, o2.second.sex);
-                    }
-                    return c;
-                }).reversed());
+            rma.sort(Comparator.<Pair<Integer, CIndividual>>comparingInt(o -> o.first).thenComparingInt(o -> o.second.level).thenComparingInt(o -> o.second.sex).reversed());
 
             // put indis on rptoclean list in order of processing
             rma.forEach(ma -> rptoclean.add(ma.second));
