@@ -35,20 +35,8 @@ public class Layout {
             final Optional<Indi> husb = fami.getHusb();
             final Optional<Indi> wife = fami.getWife();
 
-            if (husb.isPresent()) {
-                final CIndividual cHusb = mapIndis.get(husb.get());
-                cHusb.ridxSpouseToFamily.add(f.idx);
-                if (wife.isPresent()) {
-                    cHusb.ridxSpouse.add(mapIndis.get(wife.get()).idx);
-                }
-            }
-            if (wife.isPresent()) {
-                final CIndividual cWife = mapIndis.get(wife.get());
-                cWife.ridxSpouseToFamily.add(f.idx);
-                if (husb.isPresent()) {
-                    cWife.ridxSpouse.add(mapIndis.get(husb.get()).idx);
-                }
-            }
+            addSpouse(mapIndis, f, husb, wife);
+            addSpouse(mapIndis, f, wife, husb);
 
             fami.getChildren().forEach(c -> {
                 final CIndividual cChild = mapIndis.get(c);
@@ -68,7 +56,14 @@ public class Layout {
         });
     }
 
-
+    private void addSpouse(Map<Indi, CIndividual> mapIndis, CFamily fami, Optional<Indi> indi, Optional<Indi> spouse)
+    {
+        if (indi.isPresent()) {
+            final CIndividual cindi = mapIndis.get(indi.get());
+            cindi.ridxSpouseToFamily.add(fami.idx);
+            spouse.ifPresent(i -> cindi.ridxSpouse.add(mapIndis.get(i).idx));
+        }
+    }
 
 
     private final List<CIndividual> indis;
@@ -154,8 +149,7 @@ public class Layout {
             if (idxChildToFamily >= 0) {
                 final CFamily fami = m_pDoc.famis.get(idxChildToFamily);
                 for (int i = 0; i < fami.children.size(); ++i) {
-                    final CIndividual sib = m_pDoc.indis.get(fami.children.get(i));
-                    sib.setLevel(lev);
+                    m_pDoc.indis.get(fami.children.get(i)).setLevel(lev);
                 }
             }
 
@@ -210,7 +204,7 @@ public class Layout {
             }
         }
 
-        void setSeqWithSpouses(final List<Pair<Double, Double>> lev_bounds, final boolean left, final List<CIndividual> cleannext) {
+        void setSeqWithSpouses(final List<Double> lev_bounds, final boolean left, final List<CIndividual> cleannext) {
             final LinkedList<CIndividual> all_sps = new LinkedList<>();
             // build list of all spouses in this spouse group
             {
@@ -320,10 +314,10 @@ public class Layout {
             }
         }
 
-        private void displaySpouses(final List<Pair<Double, Double>> lev_bounds, final CIndividual pindi) {
-            pindi.MoveTo(new Point2D.Double(lev_bounds.get(pindi.level).second, pindi.frame.getY()));
+        private void displaySpouses(final List<Double> lev_bounds, final CIndividual pindi) {
+            pindi.MoveTo(new Point2D.Double(lev_bounds.get(pindi.level), pindi.frame.getY()));
             pindi.mark = true;
-            lev_bounds.get(pindi.level).second = pindi.frame.getMaxX() + childdx;
+            lev_bounds.set(pindi.level, pindi.frame.getMaxX() + childdx);
         }
 
         Date GetSimpleBirth() {
@@ -413,23 +407,13 @@ public class Layout {
 
 
 
-        final LinkedList<CIndividual> rptoclean = new LinkedList<>();
-        {
-            // build vector of indis (w/male descent size)
-            final List<Pair<Integer, CIndividual>> rma = new ArrayList<>();
-            for (int i = 0; i < cIndi; ++i) {
-                final CIndividual pindi = this.indis.get(i);
-                if (pindi.maxMale != 0) {
-                    rma.add(new Pair<>(pindi.maxMale, pindi));
-                }
-            }
+        final LinkedList<CIndividual> rptoclean =
+            this.indis.stream()
+                .filter(i -> i.maxMale != 0)
+                .sorted(primaryHouse())
+                .collect(Collectors.toCollection(LinkedList::new));
 
-            // Sorting branches.
-            rma.sort(Comparator.<Pair<Integer, CIndividual>>comparingInt(o -> o.first).thenComparingInt(o -> o.second.level).thenComparingInt(o -> o.second.sex).reversed());
 
-            // put indis on rptoclean list in order of processing
-            rma.forEach(ma -> rptoclean.add(ma.second));
-        }
 
 
 
@@ -485,9 +469,9 @@ public class Layout {
 
 
 
-        final List<Pair<Double, Double>> lev_bounds = new ArrayList<>();
+        final List<Double> lev_bounds = new ArrayList<>();
         for (int i = 0; i < nlev; ++i) {
-            lev_bounds.add(new Pair<>(999.999D /* unused??? */, 0.0D));
+            lev_bounds.add(0.0D);
         }
 
         ClearAllIndividuals();
@@ -548,7 +532,7 @@ public class Layout {
                             final List<CIndividual> cleannext2 = new ArrayList<>();
                             pchil.setSeqWithSpouses(lev_bounds, left, cleannext2);
                             nexthouse.addAll(cleannext2);
-                            lev_bounds.get(pchil.level).second += childdx;
+                            lev_bounds.set(pchil.level, lev_bounds.get(pchil.level) + childdx);
                             left = false;
                             if (pchil.sex == 1 && !guard.contains(pchil)) {
                                 todo.add(pchil);
@@ -562,18 +546,18 @@ public class Layout {
             double maxx = Double.NEGATIVE_INFINITY;
             boolean any = false;
             for (int j = 0; j < nlev; ++j) {
-                if (maxx < lev_bounds.get(j).second) {
-                    maxx = lev_bounds.get(j).second;
+                if (maxx < lev_bounds.get(j)) {
+                    maxx = lev_bounds.get(j);
                 }
                 //kludge to see if any people in this house
-                if (j > 0 && !lev_bounds.get(j).second.equals(lev_bounds.get(j - 1).second)) {
+                if (j > 0 && !lev_bounds.get(j).equals(lev_bounds.get(j - 1))) {
                     any = true;
                 }
             }
             if (any) {
                 maxx += familydx;
                 for (int j = 0; j < nlev; ++j) {
-                    lev_bounds.get(j).second = maxx;
+                    lev_bounds.set(j, maxx);
                 }
             }
 
@@ -585,41 +569,22 @@ public class Layout {
             }
         }
 
-        this.indis.forEach(i -> {
-            i.indi.move(new Dim2D(i.frame.getX(), i.frame.getY()));
-        });
+        this.indis.forEach(i -> i.indi.move(new Dim2D(i.frame.getX(), i.frame.getY())));
     }
+
+
+
+    private static Comparator<CIndividual> primaryHouse() {
+        return Comparator.<CIndividual>
+            comparingInt(i -> i.maxMale)
+            .thenComparingInt(i -> i.level)
+            .thenComparingInt(i -> i.sex)
+            .reversed();
+    }
+
+
 
     private void ClearAllIndividuals() {
         this.indis.forEach(i -> i.mark = false);
-    }
-
-
-
-
-
-
-    static class Pair<T, U> {
-        T first; //mutable
-        U second; //mutable
-
-        Pair(final T i, final U j) {
-            this.first = i;
-            this.second = j;
-        }
-
-        @Override
-        public int hashCode() {
-            return first.hashCode() ^ second.hashCode();
-        }
-
-        @Override
-        public boolean equals(final Object object) {
-            if (!(object instanceof Pair)) {
-                return false;
-            }
-            final Pair that = (Pair) object;
-            return first.equals(that.first) && second.equals(that.second);
-        }
     }
 }
