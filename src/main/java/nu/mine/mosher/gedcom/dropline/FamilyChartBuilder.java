@@ -68,8 +68,8 @@ public final class FamilyChartBuilder {
         final Optional<Point2D> coords = toCoord(xyval);
         final GedcomLine lineIndi = nodeIndi.getObject();
         final String name = toName(getChildValue(nodeIndi, "NAME"));
-        final String birth = toDate(getChildEventDate(nodeIndi, "BIRT"));
-        final String death = toDate(getChildEventDate(nodeIndi, "DEAT"));
+        final DatePeriod birth = toDate(getChildEventDate(nodeIndi, "BIRT"));
+        final DatePeriod death = toDate(getChildEventDate(nodeIndi, "DEAT"));
         final String refn = getChildValue(nodeIndi, "REFN");
         final int sex = toSex(getChildValue(nodeIndi, "SEX"));
         final String id = lineIndi.getID();
@@ -122,20 +122,13 @@ public final class FamilyChartBuilder {
         return name.replaceAll("/", "");
     }
 
-    private static String toDate(final String date) {
-        if (date.isEmpty()) {
-            return "";
-        }
-
-        DatePeriod gedcomDate;
-        final GedcomDateValueParser parser = new GedcomDateValueParser(new StringReader(date));
+    private static DatePeriod toDate(final String date) {
         try {
-            gedcomDate = parser.parse();
+            return new GedcomDateValueParser(new StringReader(date)).parse();
         } catch (final Exception e) {
-            System.err.println("Error while parsing \"" + date + "\"");
-            return "";
+            System.err.println("Error while parsing DATE: \"" + date + "\"");
+            return DatePeriod.UNKNOWN;
         }
-        return gedcomDate.getTabularString().toLowerCase();
     }
 
     private static String getChildEventDate(final TreeNode<GedcomLine> node, final String tag) {

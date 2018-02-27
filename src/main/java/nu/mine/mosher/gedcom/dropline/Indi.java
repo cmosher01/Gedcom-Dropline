@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.util.*;
+import nu.mine.mosher.gedcom.date.DatePeriod;
 import nu.mine.mosher.geom.Dim2D;
 
 import static java.awt.font.TextAttribute.*;
@@ -35,12 +36,15 @@ public class Indi {
     private final Dim2D dim = new Dim2D(0, TOP_MARGIN);
     private final List<Line> lines = new ArrayList<>();
     private final int sex;
+    private final DatePeriod birth;
 
     public int getSex() {
         return this.sex;
     }
 
-
+    public DatePeriod getBirth() {
+        return this.birth;
+    }
 
     private static class Line {
         private final String text;
@@ -68,7 +72,7 @@ public class Indi {
 
 
 
-    public Indi(final Point2D coords, String id, String name, String birth, String death, String refn, final int sex) {
+    public Indi(final Point2D coords, String id, String name, DatePeriod birth, DatePeriod death, String refn, final int sex) {
         this.id = id;
         this.coords.setLocation(coords);
         this.sex = sex;
@@ -90,14 +94,22 @@ public class Indi {
         if (!name.isEmpty()) {
             appendToDisplay(g, name, CLS_NAME, refn, this.dim, this.lines);
         }
-        if (!birth.isEmpty()) {
-            appendToDisplay(g, PFX_BIRTH + birth, CLS_BIRTH, refn, this.dim, this.lines);
+
+        this.birth = birth;
+        final String displayBirth = dateString(birth);
+        if (!displayBirth.isEmpty()) {
+            appendToDisplay(g, PFX_BIRTH + displayBirth, CLS_BIRTH, refn, this.dim, this.lines);
         }
-        if (!death.isEmpty()) {
-            appendToDisplay(g, PFX_DEATH + death, CLS_DEATH, refn, this.dim, this.lines);
+        final String displayDeath = dateString(death);
+        if (!displayDeath.isEmpty()) {
+            appendToDisplay(g, PFX_DEATH + displayDeath, CLS_DEATH, refn, this.dim, this.lines);
         }
 
         this.dim.setSize(this.dim.getWidth(), this.dim.getHeight()+BOTTOM_MARGIN);
+    }
+
+    private static String dateString(final DatePeriod date) {
+        return date.getTabularString().toLowerCase();
     }
 
     public String getId() {

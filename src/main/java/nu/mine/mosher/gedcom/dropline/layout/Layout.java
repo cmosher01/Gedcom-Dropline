@@ -8,11 +8,12 @@ import java.util.stream.IntStream;
 import nu.mine.mosher.gedcom.dropline.Fami;
 import nu.mine.mosher.gedcom.dropline.Indi;
 import nu.mine.mosher.geom.Dim2D;
+import nu.mine.mosher.time.Time;
 
 
 public class Layout {
-    private static final int childdx = 18;
-    private static final int familydx = childdx * 4;
+    private static final int DX_CHILD = 18;
+    private static final int DX_FAMILY = DX_CHILD * 4;
 
     public Layout(final List<Indi> indis, final List<Fami> famis) {
         this.indis = IntStream.range(0, indis.size())
@@ -56,7 +57,7 @@ public class Layout {
         });
     }
 
-    private void addSpouse(Map<Indi, CIndividual> mapIndis, CFamily fami, Optional<Indi> indi, Optional<Indi> spouse)
+    private static void addSpouse(Map<Indi, CIndividual> mapIndis, CFamily fami, Optional<Indi> indi, Optional<Indi> spouse)
     {
         if (indi.isPresent()) {
             final CIndividual cindi = mapIndis.get(indi.get());
@@ -66,8 +67,11 @@ public class Layout {
     }
 
 
+
     private final List<CIndividual> indis;
     private final List<CFamily> famis;
+
+
 
     class CFamily {
         private final int idx;
@@ -84,9 +88,11 @@ public class Layout {
         void GetSortedChildren(final List<Integer> riChild) {
             riChild.clear();
             riChild.addAll(children);
-            riChild.sort(Comparator.comparing(i -> Layout.this.indis.get(i).GetSimpleBirth()));
+            riChild.sort(Comparator.comparing(i -> Layout.this.indis.get(i).getSimpleBirth()));
         }
     }
+
+
 
     class CIndividual {
         private Layout m_pDoc = Layout.this;
@@ -121,20 +127,18 @@ public class Layout {
 
         void setLevel(final int lev) {
             //already done
-            if (mark) {
+            if (this.mark) {
                 return;
             }
 
             //doing
-            mark = true;
+            this.mark = true;
 
             //self
-            level = lev;
+            this.level = lev;
 
             // position along y axis
-            final int levdy = 100;
-            final Point2D pt = new Point2D.Double(0.0D, (5000.0D - level) * levdy - frame.getHeight() / 2);
-            MoveTo(pt);
+            MoveTo(new Point2D.Double(0.0D, (5000.0D - this.level) * 100.0D - this.frame.getHeight() / 2.0D));
 
             //father
             if (idxFather >= 0) {
@@ -269,7 +273,6 @@ public class Layout {
             LinkedList<CIndividual> right_sps = new LinkedList<>();
             // build list of spouses to be displayed off to the RIGHT of the indi
             {
-                // TODO this is inconsistent with left, because this was missing: right_sps.add(this);  is this correct????
                 CIndividual pindi = this;
                 while (pindi != null) {
                     boolean found = false;
@@ -299,29 +302,18 @@ public class Layout {
                 right_sps = t;
             }
 
-            // display spouses from the LEFT
-            final Iterator<CIndividual> left_iter = left_sps.descendingIterator();
-            //noinspection WhileLoopReplaceableByForEach
-            while (left_iter.hasNext()) {
-                displaySpouses(lev_bounds, left_iter.next());
-            }
-
-            // display spouses to the RIGHT
-            final Iterator<CIndividual> right_iter = right_sps.iterator();
-            //noinspection WhileLoopReplaceableByForEach
-            while (right_iter.hasNext()) {
-                displaySpouses(lev_bounds, right_iter.next());
-            }
+            left_sps.descendingIterator().forEachRemaining(s -> displaySpouses(lev_bounds, s));
+            right_sps.iterator().forEachRemaining(s -> displaySpouses(lev_bounds, s));
         }
 
         private void displaySpouses(final List<Double> lev_bounds, final CIndividual pindi) {
             pindi.MoveTo(new Point2D.Double(lev_bounds.get(pindi.level), pindi.frame.getY()));
             pindi.mark = true;
-            lev_bounds.set(pindi.level, pindi.frame.getMaxX() + childdx);
+            lev_bounds.set(pindi.level, pindi.frame.getMaxX() + DX_CHILD);
         }
 
-        Date GetSimpleBirth() {
-            return new Date(); // TODO
+        private Time getSimpleBirth() {
+            return this.indi.getBirth().getStartDate().getApproxDay();
         }
     }
 
@@ -340,8 +332,8 @@ public class Layout {
 
 
         // set generation levels (also sets position on y-axis)
-        ClearAllIndividuals();
         {
+            clearAllIndividuals();
             int batch = 0;
             boolean someleft = true;
             while (someleft) {
@@ -355,59 +347,45 @@ public class Layout {
             }
         }
 
-        // find number of levels, and normalize indis' level nums
-        int nlev;
+        // normalize indis' level nums
+        final int cLev; //count of levels
         {
-            // Counting generations
-            int maxlev = Integer.MIN_VALUE;
-            int minlev = Integer.MAX_VALUE;
+            final int levMax = this.indis.stream().mapToInt(i -> i.level).max().getAsInt();
+            final int levMin = this.indis.stream().mapToInt(i -> i.level).min().getAsInt();
+
+            cLev = levMax - levMin + 1;
             for (final CIndividual indi : this.indis) {
-                final int lev = indi.level;
-                if (maxlev < lev) {
-                    maxlev = lev;
-                }
-                if (lev < minlev) {
-                    minlev = lev;
-                }
-            }
-            //count of levels
-            nlev = maxlev - minlev + 1;
-            for (final CIndividual indi : this.indis) {
-                indi.level -= minlev;
+                indi.level -= levMin;
             }
         }
 
 
 
         // calc max male-branch-descendant-generations size for all indis
-        ClearAllIndividuals();
         {
+            clearAllIndividuals();
             // Finding branches
-            for (final CIndividual pindi : this.indis) {
-                CIndividual pfath = pindi;
-                int c;
-                if (pindi.sex == 1) {
-                    c = 1;
-                } else {
-                    c = 0;
-                }
-                final Set<Integer> setindi = new HashSet<>();// guard against loops
+            for (final CIndividual indi : this.indis) {
+                int c = (indi.sex == 1) ? 1 : 0;
+
+                final Set<Integer> setIndi = new HashSet<>();// guard against loops
+                CIndividual father = indi;
                 int f;
-                while (((f = pfath.idxFather) >= 0) && !setindi.contains(f)) {
-                    setindi.add(f);
+                while ((f = father.idxFather) >= 0 && !setIndi.contains(f)) {
+                    setIndi.add(f);
                     ++c;
-                    pfath = this.indis.get(f);
+                    father = this.indis.get(f);
                 }
-                pfath.setMaxMaleIf(c);
-                if (pfath.idxMother >= 0) {
-                    this.indis.get(pfath.idxMother).maxMale = c + 1;
+                father.setMaxMaleIf(c);
+                if (father.idxMother >= 0) {
+                    this.indis.get(father.idxMother).maxMale = c + 1;
                 }
             }
         }
 
 
 
-        final LinkedList<CIndividual> rptoclean =
+        final Deque<CIndividual> qToClean =
             this.indis.stream()
                 .filter(i -> i.maxMale != 0)
                 .sorted(primaryHouse())
@@ -419,13 +397,13 @@ public class Layout {
 
         // Labeling branches
 
-        ClearAllIndividuals();
+        clearAllIndividuals();
 
-        for (final CIndividual pindi : rptoclean) {
-            final LinkedList<CIndividual> todo = new LinkedList<>();
+        for (final CIndividual indi : qToClean) {
+            final Deque<CIndividual> todo = new LinkedList<>();
 
-            pindi.setRootWithSpouses(pindi);
-            todo.addLast(pindi);
+            indi.setRootWithSpouses(indi);
+            todo.addLast(indi);
             while (!todo.isEmpty()) {
                 final CIndividual pgmi = todo.removeFirst();
                 for (int j = 0; j < pgmi.ridxSpouseToFamily.size(); ++j) {
@@ -433,7 +411,7 @@ public class Layout {
                     for (int k = 0; k < fami.children.size(); ++k) {
                         final CIndividual pchil = this.indis.get(fami.children.get(k));
                         if (!pchil.mark) {
-                            pchil.setRootWithSpouses(pindi);
+                            pchil.setRootWithSpouses(indi);
                             if (pchil.sex == 1) {
                                 todo.addLast(pchil);
                             }
@@ -446,7 +424,7 @@ public class Layout {
 
 
         // build new list with only house heads
-        final LinkedList<CIndividual> rptoclean2 = new LinkedList<>();
+        final Deque<CIndividual> rptoclean2 = new LinkedList<>();
         final Set<CIndividual> settoclean2 = new HashSet<>();
         {
             // Finding progenitors
@@ -459,7 +437,7 @@ public class Layout {
             }
 
             // put house heads on rptoclean2 list in order of processing
-            for (final CIndividual psec : rptoclean) {
+            for (final CIndividual psec : qToClean) {
                 if (setheads.contains(psec.idx)) {
                     rptoclean2.add(psec);
                     settoclean2.add(psec);
@@ -470,14 +448,14 @@ public class Layout {
 
 
         final List<Double> lev_bounds = new ArrayList<>();
-        for (int i = 0; i < nlev; ++i) {
+        for (int i = 0; i < cLev; ++i) {
             lev_bounds.add(0.0D);
         }
 
-        ClearAllIndividuals();
+        clearAllIndividuals();
         // Moving branches.
         while (!rptoclean2.isEmpty()) {
-            final CIndividual psec = rptoclean2.remove(0);
+            final CIndividual psec = rptoclean2.remove();
             settoclean2.remove(psec);
 
             final List<CIndividual> nexthouse = new ArrayList<>();
@@ -532,7 +510,7 @@ public class Layout {
                             final List<CIndividual> cleannext2 = new ArrayList<>();
                             pchil.setSeqWithSpouses(lev_bounds, left, cleannext2);
                             nexthouse.addAll(cleannext2);
-                            lev_bounds.set(pchil.level, lev_bounds.get(pchil.level) + childdx);
+                            lev_bounds.set(pchil.level, lev_bounds.get(pchil.level) + DX_CHILD);
                             left = false;
                             if (pchil.sex == 1 && !guard.contains(pchil)) {
                                 todo.add(pchil);
@@ -545,7 +523,7 @@ public class Layout {
 
             double maxx = Double.NEGATIVE_INFINITY;
             boolean any = false;
-            for (int j = 0; j < nlev; ++j) {
+            for (int j = 0; j < cLev; ++j) {
                 if (maxx < lev_bounds.get(j)) {
                     maxx = lev_bounds.get(j);
                 }
@@ -555,8 +533,8 @@ public class Layout {
                 }
             }
             if (any) {
-                maxx += familydx;
-                for (int j = 0; j < nlev; ++j) {
+                maxx += DX_FAMILY;
+                for (int j = 0; j < cLev; ++j) {
                     lev_bounds.set(j, maxx);
                 }
             }
@@ -575,8 +553,8 @@ public class Layout {
 
 
     private static Comparator<CIndividual> primaryHouse() {
-        return Comparator.<CIndividual>
-            comparingInt(i -> i.maxMale)
+        return Comparator
+            .comparingInt((CIndividual i) -> i.maxMale)
             .thenComparingInt(i -> i.level)
             .thenComparingInt(i -> i.sex)
             .reversed();
@@ -584,7 +562,7 @@ public class Layout {
 
 
 
-    private void ClearAllIndividuals() {
+    private void clearAllIndividuals() {
         this.indis.forEach(i -> i.mark = false);
     }
 }
