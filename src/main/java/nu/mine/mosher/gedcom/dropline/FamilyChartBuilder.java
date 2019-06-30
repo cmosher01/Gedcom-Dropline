@@ -126,7 +126,9 @@ public final class FamilyChartBuilder {
         try {
             return new GedcomDateValueParser(new StringReader(date)).parse();
         } catch (final Exception e) {
-            System.err.println("Error while parsing DATE: \"" + date + "\"");
+            if (!date.isEmpty()) {
+                System.err.println("Error while parsing DATE: \"" + date + "\"");
+            }
             return DatePeriod.UNKNOWN;
         }
     }
